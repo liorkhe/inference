@@ -1723,7 +1723,45 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     detail("*Refer to Effective Settings for actual value");
 #endif
   });
+    
 
+ //********** Check for Network Submission (start) *********//
+  // note: assuming 'sut_getname_min_latency_ns' used for network mode but can
+  // be used regardless
+  const bool is_over_network_mode =
+      requested_settings.sut_getname_min_latency_ns > 0;
+  if (is_over_network_mode) {
+    // measure sut->Name() response time
+    // network SUT is expected to have higher latency, compared to local SUT
+    auto pc_start_name_ts = PerfClock::now();
+    auto sut_name = sut->Name();
+    auto pc_stop_name_ts = PerfClock::now();
+
+    auto is_valid_network_name =
+        std::string::npos != sut_name.find(std::string("Network SUT"));
+    assert(is_valid_network_name) &&
+        "network SUT expected to have 'Network SUT' in name";
+    auto pc_name_duration_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(pc_stop_name_ts -
+                                                             pc_start_name_ts)
+            .count();
+
+    auto is_min_latency_met =
+        (pc_name_duration_ns > requested_settings.sut_getname_min_latency_ns);
+    assert(is_min_latency_met) && "network SUT min latency failed";
+
+  LogDetail([pc_name_duration_ns](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "network_sut_getname_response_time_ns",
+               pc_name_duration_ns);
+#else
+    detail("network_sut_getname_response_time_ns: ", pc_name_duration_ns);
+#endif
+  });
+  //********** Check for Network Submission (end) *********//
+      
+    
+    
   TestSettings test_settings = requested_settings;
   // Look for Audit Config file to override TestSettings during audit
   if (FileExists(audit_config_filename)) {
