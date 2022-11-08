@@ -20,6 +20,7 @@ limitations under the License.
 #include <vector>
 
 #include "query_sample.h"
+#include "system_under_test.h"
 
 namespace mlperf {
 
@@ -33,31 +34,14 @@ namespace mlperf {
 /// traffic.
 /// \todo Support power hooks for correlating test timeline with power
 /// measurment timeline.
-class QueryDispatchLibrary {
+class QueryDispatchLibrary : public SystemUnderTest {
  public:
   virtual ~QueryDispatchLibrary() {}
 
-  /// \brief A human-readable string for logging purposes. Name should return from SUT over the network.
-  virtual const std::string& Name() = 0;
+  /// \brief A human-readable string for logging purposes. The RemoteName return value must contain the substring "Network SUT". 
+  ///        RemoteName should return from SUT over the network.
+  virtual const std::string& RenoteName() = 0;
 
-  /// \brief Lets the loadgen issue N samples to the QDL for the SUT
-  /// \details The QDL may either a) return immediately and signal completion
-  /// at a later time on another thread or b) it may block and signal
-  /// completion on the current stack. The load generator will handle both
-  /// cases properly.
-  /// Note: The data for neighboring samples may or may not be contiguous
-  /// depending on the scenario.
-  virtual void IssueQuery(const std::vector<QuerySample>& samples) = 0;
-
-  /// \brief Called immediately after the last call to IssueQuery
-  /// in a series is made.
-  /// \details This doesn't necessarily signify the end of the
-  /// test since there may be multiple series involved during a test; for
-  /// example in accuracy mode.
-  /// Clients can use this to flush any deferred queries immediately, rather
-  /// than waiting for some timeout.
-  /// This is especially useful in the server scenario.
-  virtual void FlushQueries() = 0;
 };
 
 /// @}
