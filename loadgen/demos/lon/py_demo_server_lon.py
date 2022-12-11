@@ -32,7 +32,7 @@ import mlperf_loadgen
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('sut_server', 'http://localhost:8000',
+flags.DEFINE_list('sut_server', 'http://localhost:8000',
                     'Address of the server under test.')
 
 
@@ -73,20 +73,20 @@ class QDL:
     - /getname/ : Get the name of the SUT. Send a getname to the SUT and get a response.
     """
 
-    def __init__(self, qsl: QSL, sut_server_addr: str):
+    def __init__(self, qsl: QSL, sut_server_addr: list):
         """
         Constructor for the QDL.
         Args:
             qsl: The QSL to use.
-            sut_server_addr: The address of the SUT.
+            sut_server_addr: The addresses of the SUT.
         """
         self.qsl = qsl
-        self.sut_server_addr = sut_server_addr
-
+ 
         # Construct QDL from the python binding
         self.qdl = mlperf_loadgen.ConstructQDL(
             self.issue_query, self.flush_queries, self.client_get_name)
         self.sut_server_addr = sut_server_addr
+        self.num_Nodes = len(sut_server_addr)
 
     def issue_query(self, query_samples):
         """Process the query to send to the SUT"""
@@ -118,7 +118,7 @@ class QDL:
 
             time.sleep(.001)  # Ensure a maximal rate of queries to the SUT
 
-            # Send the query to SUT
+            # Send the query to SUT in round robin
             # Wait for a response
             sut_result = self.client_predict(features, s.index)
             response_array = array.array('B', sut_result.encode('utf-8'))
@@ -128,16 +128,19 @@ class QDL:
         mlperf_loadgen.QuerySamplesComplete(responses)
 
     def client_predict(self, query, id):
-        """Serialize the query, send it to the SUT, and return the deserialized response."""
-        url = '{}/predict/'.format(self.sut_server_addr)
+        """Serialize the query, send it to the SUT in round robin, and return the deserialized response."""
+        url = '{}/predict/'.format(self.sut_server_addr[id%self.num_Nodes])
         response = requests.post(url, json={'query': query, id: id})
         return response.json()['result']
 
     def client_get_name(self):
-        """Get the name of the SUT from the SUT."""
-        url = '{}/getname/'.format(self.sut_server_addr)
-        response = requests.post(url)
-        return response.json()['name']
+        """Get the name of the SUT from ALL the SUTS."""
+        response_all = ''
+        for node_index in range(0,self.num_Nodes):
+            url = '{}/getname/'.format(self.sut_server_addr[node_index])
+            response = requests.post(url)
+            response_all = response_all + '\n' + response.json()['name']
+        return response_all
 
     def __del__(self):
         mlperf_loadgen.DestroyQDL(self.qdl)
