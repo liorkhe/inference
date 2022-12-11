@@ -63,5 +63,5 @@ Then, when running the client, replace `localhost` with the correct IP.
 
 
 ```sh
-python demos/lon/py_demo_server_lon.py --sut_server IP1:8000, IP2:8000, IP3:8000
+python demos/lon/py_demo_server_lon.py --sut_server IP1:8000,IP2:8000,IP3:8000
 ```
