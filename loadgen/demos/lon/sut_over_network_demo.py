@@ -70,7 +70,7 @@ def predict():
 @app.route('/getname/', methods=['POST', 'GET'])
 def getname():
     """Returns the name of the SUT."""
-    return jsonify(name='Demo SUT (Network SUT) node' + node)
+    return jsonify(name=f'Demo SUT (Network SUT) node' + (' ' + node) if node else '')
 
 
 if __name__ == '__main__':
